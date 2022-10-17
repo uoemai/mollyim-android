@@ -90,28 +90,20 @@ def abiPostFix = ['universal'   : 0,
                   'x86_64'      : 4]
 
 def selectableVariants = [
-        'internalProdFlipper',
-        'internalProdPerf',
-        'internalProdRelease',
-        'internalStagingFlipper',
-        'internalStagingPerf',
-        'internalStagingRelease',
-        'nightlyProdFlipper',
-        'nightlyProdPerf',
-        'nightlyProdRelease',
-        'nightlyStagingPerf',
-        'playProdDebug',
-        'playProdFlipper',
-        'playProdPerf',
-        'playProdRelease',
-        'playStagingDebug',
-        'playStagingFlipper',
-        'playStagingPerf',
-        'playStagingRelease',
-        'studyProdMock',
-        'studyProdPerf',
-        'websiteProdFlipper',
-        'websiteProdRelease',
+        'prodFreeDebug',
+        'prodFreeRelease',
+        //'prodFreeSpinner',
+        'prodNonFreeDebug',
+        'prodNonFreeRelease',
+        'prodNonFreeSpinner',
+        'stagingFreeDebug',
+        'stagingFreeRelease',
+        //'stagingFreeSpinner',
+        'stagingNonFreeDebug',
+        'stagingNonFreeRelease',
+        //'stagingNonFreeSpinner',
+        'devFreeDebug',
+        'devNonFreeDebug',
 ]
 
 android {
@@ -274,6 +266,36 @@ android {
             buildConfigField "String", "BUILD_ENVIRONMENT_TYPE", "\"Staging\""
         }
 
+        dev {
+            dimension 'environment'
+
+            applicationIdSuffix ".dev"
+            buildConfigField "String", "SIGNAL_PACKAGE_NAME", "\"org.thoughtcrime.securesms.dev\""
+
+            buildConfigField "String", "SIGNAL_URL", "\"https://localhost:8443\""
+            buildConfigField "String", "STORAGE_URL", "\"https://localhost:10443\""
+            buildConfigField "String", "SIGNAL_CDN_URL", "\"https://invalid\""
+            buildConfigField "String", "SIGNAL_CDN2_URL", "\"https://invalid\""
+            buildConfigField "String", "SIGNAL_CONTACT_DISCOVERY_URL", "\"https://invalid\""
+            buildConfigField "String", "SIGNAL_CDSH_URL", "\"https://invalid\""
+            buildConfigField "String", "SIGNAL_CDSI_URL", "\"https://invalid\""
+            buildConfigField "String", "SIGNAL_SERVICE_STATUS_URL", "\"localhost\""
+            buildConfigField "String", "SIGNAL_KEY_BACKUP_URL", "\"https://invalid\""
+            buildConfigField "String", "SIGNAL_SFU_URL", "\"https://invalid\""
+            buildConfigField "String[]", "SIGNAL_SFU_INTERNAL_NAMES", "new String[]{\"Test\", \"Staging\"}"
+            buildConfigField "String[]", "SIGNAL_SFU_INTERNAL_URLS", "new String[]{\"https://invalid\", \"https://invalid\"}"
+            buildConfigField "String", "CONTENT_PROXY_HOST", "\"invalid\""
+            buildConfigField "int", "CONTENT_PROXY_PORT", "443"
+            buildConfigField "String", "UNIDENTIFIED_SENDER_TRUST_ROOT", "\"BSHB7UfEJ0+UFnpCoFrHVUP/aNYVfKZxOkOl3Wgjf7xn\""
+            buildConfigField "String", "ZKGROUP_SERVER_PUBLIC_PARAMS", "\"ACL4V8rh4l4xF+c0dcRg5JN4G8reoEExtEdVvbU10qYY0sPn+LPGavcjNo7FbXNhpedld6n5GrmA5rPdYXNIVAKQ2ILKRGcmox4/KTmuuW32iOBznCAOuJ/rTafroBOCFUQYXA1A8wz52aYM4iqi+YwZuWs3lbolU2hAuDFLkoBDRNwftdNT2sUD1jRy+gpBimAXIBTm28O04PUBZx6KAUVyjxemiB1emO2fA6KL7/30Pna9YQe//mu5XvLElAyOR2g4qjifCZQdOfXc7BOo6CLRLPS71GkZvYhiZKxm6F8I\""
+            buildConfigField "String", "MOBILE_COIN_ENVIRONMENT", "\"testnet\""
+            buildConfigField "String", "SIGNAL_CAPTCHA_URL", "\"https://invalid\""
+            buildConfigField "String", "RECAPTCHA_PROOF_URL", "\"https://invalid\""
+            buildConfigField "String", "BADGE_STATIC_ROOT", "\"https://invalid\""
+
+            buildConfigField "String", "BUILD_ENVIRONMENT_TYPE", "\"Dev\""
+        }
+
         free {
             dimension 'distribution'
             versionNameSuffix '-FOSS'
@@ -322,10 +344,11 @@ android {
     }
 
     android.applicationVariants.all { variant ->
+        def isDev = variant.productFlavors*.name.contains("dev")
         def isStaging = variant.productFlavors*.name.contains("staging")
         def hasSigningConfig = buildType.signingConfig || variant.signingConfig
 
-        variant.resValue 'string', 'app_name', baseAppName + (isStaging ? " Staging" : "")
+        variant.resValue 'string', 'app_name', baseAppName + (isDev ? " Dev" : isStaging ? " Staging" : "")
         variant.resValue "string", 'package_name', variant.applicationId
 
         variant.outputs.all {
@@ -343,6 +366,12 @@ android {
     testOptions {
         unitTests {
             includeAndroidResources = true
+        }
+    }
+
+    android.variantFilter { variant ->
+        if (!selectableVariants.contains(variant.name)) {
+            setIgnore(true)
         }
     }
 }
@@ -507,7 +536,7 @@ dependencies {
 }
 
 dependencyVerification {
-    configuration = '(staging|prod)(Free|NonFree)(Debug|Release)RuntimeClasspath'
+    configuration = '(dev|staging|prod)(Free|NonFree)(Debug|Release)RuntimeClasspath'
 }
 
 static def getCommitTag() {
